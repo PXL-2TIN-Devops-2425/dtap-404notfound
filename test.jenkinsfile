@@ -44,5 +44,13 @@ pipeline {
                 '''
             }
         }
+        stage('Deployment') {
+            steps {
+                sh '''
+                docker pull $APP_NAME:latest
+                docker run -d --name calculator-app -p 3000:3000 $APP_NAME:latest
+                '''
+            }
+        }
     }
 }
