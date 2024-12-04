@@ -1,5 +1,11 @@
 pipeline {
     agent any
+    environment {
+        SSH_CREDENTIAL_ID = '67cf61e8-5422-49ae-aafd-f2dfb4228be2'
+        PROD_SERVER_IP = '54.242.101.2' 
+        DOCKER_IMAGE = 'bjarnelemmenspxl/calculator-app:latest'
+    }
+
     stages {
         stage('dtap production') {
             steps {
@@ -7,4 +13,19 @@ pipeline {
             }
         }
     }
+stages {
+        stage('Deploy to Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER_IP} << EOF
+                    docker stop
+                    docker container prune
+                    docker pull ${DOCKER_IMAGE}
+                    << EOF
+                    '''
+                }
+            }
+        }
+
 }
