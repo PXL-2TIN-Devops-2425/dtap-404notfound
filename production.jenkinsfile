@@ -26,5 +26,39 @@ pipeline {
                 }
             }
         }
-       
+        stage('Start Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER_IP} << EOF
+                    docker run -d --name production-container -p 80:3000 ${DOCKER_IMAGE}
+                    << EOF
+                    '''
+                }
+            }
+        }
+        stage('Test Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://${PROD_SERVER_IP})
+                    if [ $STATUS_CODE -eq 200 ]; then
+                        echo "Application is running"
+                    else
+                        echo "Application failed to start. Status code: $STATUS_CODE"
+                        exit 1
+                    fi
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'success'
+        }
+        failure {
+            echo 'fail'
+        }
+    }
 }
