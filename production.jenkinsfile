@@ -1,10 +1,64 @@
 pipeline {
     agent any
+
+    environment {
+        SSH_CREDENTIAL_ID = '67cf61e8-5422-49ae-aafd-f2dfb4228be2'
+        PROD_SERVER_IP = '54.227.171.175'
+        DOCKER_IMAGE = 'jefgeebelenpxl/calculatorapp'
+    }
+
     stages {
         stage('dtap production') {
             steps {
                 echo "good luck..."
             }
+        }
+        stage('Deploy to Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER_IP} << EOF
+                    docker stop
+                    docker container prune
+                    docker pull ${DOCKER_IMAGE}
+                    << EOF
+                    '''
+                }
+            }
+        }
+        stage('Start Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@${PROD_SERVER_IP} << EOF
+                    docker run -d --name production-container -p 80:3000 ${DOCKER_IMAGE}
+                    << EOF
+                    '''
+                }
+            }
+        }
+        stage('Test Prod') {
+            steps {
+                sshagent([env.SSH_CREDENTIAL_ID]) {
+                    sh '''
+                    STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://${PROD_SERVER_IP})
+                    if [ $STATUS_CODE -eq 200 ]; then
+                        echo "Application is running"
+                    else
+                        echo "Application failed to start. Status code: $STATUS_CODE"
+                        exit 1
+                    fi
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'success'
+        }
+        failure {
+            echo 'fail'
         }
     }
 }

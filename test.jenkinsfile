@@ -1,16 +1,55 @@
 pipeline {
     agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('DockerFile')
+        APP_NAME = "jefgeebelenpxl/calculatorapp"
+    }
+    
+    tools {
+        nodejs 'testenvnode'
+    }
   
     stages {
         stage ('cleanup'){
             steps{
                 // TODO
+                cleanWs()
             }
         }
         stage('fetch app code') {
             steps {
-                // Get some code from a GitHub repository
                 git branch: 'main', url: 'https://github.com/PXL-2TIN-DevOps-Resources/calculator-app-finished.git'
+            }
+        }
+        stage("install dependencies") {
+            steps {
+                script {
+                    sh 'npm install'
+                }
+            }
+        }
+        stage('Build artifact') {
+            steps {
+                sh 'docker build -t $APP_NAME:$BUILD_NUMBER .'
+            }
+        }
+        stage('Push artifact') {
+            steps {
+                sh '''
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                docker push $APP_NAME:$BUILD_NUMBER
+                docker tag $APP_NAME:$BUILD_NUMBER $APP_NAME:latest
+                docker push $APP_NAME:latest
+                '''
+            }
+        }
+        stage('Deployment') {
+            steps {
+                sh '''
+                docker pull $APP_NAME:latest
+                docker run -d --name calculator-app -p 3000:3000 $APP_NAME:latest
+                '''
             }
         }
     }
