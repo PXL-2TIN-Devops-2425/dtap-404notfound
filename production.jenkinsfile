@@ -1,9 +1,10 @@
 pipeline {
     agent any
+
     environment {
         SSH_CREDENTIAL_ID = '67cf61e8-5422-49ae-aafd-f2dfb4228be2'
-        PROD_SERVER_IP = '54.242.101.2' 
-        DOCKER_IMAGE = 'bjarnelemmenspxl/calculator-app:latest'
+        PROD_SERVER_IP = '54.227.171.175'
+        DOCKER_IMAGE = 'jefgeebelenpxl/calculatorapp'
     }
 
     stages {
@@ -12,8 +13,6 @@ pipeline {
                 echo "good luck..."
             }
         }
-    }
-stages {
         stage('Deploy to Prod') {
             steps {
                 sshagent([env.SSH_CREDENTIAL_ID]) {
@@ -27,5 +26,5 @@ stages {
                 }
             }
         }
-
+       
 }
